@@ -49,7 +49,7 @@
 #include <asm/types.h>
 
 
-#ifdef HAVE_HWSLIP
+#if HAVE_HWSLIP
 #include <linux/if_slip.h>
 #endif
 
