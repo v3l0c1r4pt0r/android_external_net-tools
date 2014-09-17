@@ -113,7 +113,7 @@ endif
 
 NET_LIB = $(NET_LIB_PATH)/lib$(NET_LIB_NAME).a
 
-CFLAGS	= $(COPTS) -I. -idirafter ./include/ -I$(NET_LIB_PATH)
+CFLAGS	= $(COPTS) -I. -idirafter ./include/ -I$(NET_LIB_PATH) -include bionic-fixup/Xprotoent.h
 LDFLAGS	= $(LOPTS) -L$(NET_LIB_PATH)
 
 SUBDIRS	= man/ $(NET_LIB_PATH)/

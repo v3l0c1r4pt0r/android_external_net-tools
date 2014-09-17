@@ -36,7 +36,7 @@ OBJS	= $(sort $(VARIA) $(AFOBJS) $(HWOBJS) \
 
 # This can be overwritten by the TOPLEVEL Makefile
 TOPDIR=..
-CFLAGS += -I$(TOPDIR) -idirafter $(TOPDIR)/include # -fPIC
+CFLAGS += -I$(TOPDIR) -idirafter $(TOPDIR)/include -include bionic-fixup/Xprotoent.h # -fPIC
 SONAME=libnet-tools.so.0
 
 .SUFFIXES: .a .so

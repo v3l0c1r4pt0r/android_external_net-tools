@@ -15,4 +15,4 @@ config.h
 nameif
 mii-tool
 *.o
-
+*.kdev4
