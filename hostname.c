@@ -116,7 +116,7 @@ static void setdname(char *dname)
 	case EINVAL:
 	    fprintf(stderr, _("%s: name too long\n"), program_name);
 	    break;
-	default:
+	default:;
 	}
 	exit(1);
     };
@@ -173,7 +173,7 @@ static void showhname(char *hname, int c)
 	    *p = '\0';
 	printf("%s\n", hp->h_name);
 	break;
-    default:
+    default:;
     }
 }
 
