@@ -65,7 +65,7 @@ bool 'Ash protocol family' HAVE_AFASH n
 *
 bool 'Ethernet (generic) support' HAVE_HWETHER y
 bool 'ARCnet support' HAVE_HWARC y
-bool 'SLIP (serial line) support' HAVE_HWSLIP y
+bool 'SLIP (serial line) support' HAVE_HWSLIP n
 bool 'PPP (serial line) support' HAVE_HWPPP y
 bool 'IPIP Tunnel support' HAVE_HWTUNNEL y
 bool 'STRIP (Metricom radio) support' HAVE_HWSTRIP y
