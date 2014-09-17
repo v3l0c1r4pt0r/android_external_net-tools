@@ -36,10 +36,10 @@
 #include <neteconet/ec.h>
 #endif
 
-#ifdef HAVE_HWSLIP
+#if HAVE_HWSLIP
 #include <linux/if_slip.h>
-#include <net/if_arp.h>
 #endif
+#include <net/if_arp.h>
 
 #include "net-support.h"
 #include "pathnames.h"
@@ -419,7 +419,7 @@ int if_fetch(struct interface *ife)
     else
 	ife->mtu = ifr.ifr_mtu;
 
-#ifdef HAVE_HWSLIP
+#if HAVE_HWSLIP
     if (ife->type == ARPHRD_SLIP || ife->type == ARPHRD_CSLIP ||
 	ife->type == ARPHRD_SLIP6 || ife->type == ARPHRD_CSLIP6 ||
 	ife->type == ARPHRD_ADAPT) {
