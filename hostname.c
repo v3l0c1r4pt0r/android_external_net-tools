@@ -97,7 +97,7 @@ static void sethname(char *hname)
 	case EINVAL:
 	    fprintf(stderr, _("%s: name too long\n"), program_name);
 	    break;
-	default:
+	default:;
 	}
 	exit(1);
     };
