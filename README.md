@@ -18,3 +18,21 @@ Following tools still doesn't work:
 - slattach
 - plipconfig
 - nameif
+
+Installation
+------------
+- At first you need to set CC variable e.g.:
+```
+export CC=arm-linux-androidebi-gcc
+```
+- Then configure with:
+```
+make config
+```
+You can use default values since they were modified to be compatible with Android
+- Next you can compile using make with name of the tool as argument e.g.:
+```
+make ifconfig
+```
+It is not possible to
+compile them all since compilation will terminate on hostname and compile only ifconfig.
