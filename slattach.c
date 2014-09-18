@@ -44,7 +44,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#if HAVE_HWSLIP
 #include <linux/if_slip.h>
+#endif
 
 #if defined(__GLIBC__)
 #if __GLIBC__ == 2 && __GLIBC_MINOR__ == 0
