@@ -19,6 +19,9 @@ Following tools still doesn't work:
 - plipconfig
 - nameif
 
+This repo provides all tools available in net-tools package. However it was meant to provide netstat for Android
+since its functionality isn't (AFAIK) available in any other tool and busybox implementation is really limited. 
+
 Installation
 ------------
 - At first you need to set CC, AR and RANLIB variables e.g.:
@@ -38,3 +41,9 @@ make ifconfig
 ```
 It is not possible to
 compile them all since compilation will terminate on hostname and compile only ifconfig.
+
+Issues
+------
+- ifconfig is failing at i.e. changing MAC address probably due to lack of getgrnam() function
+in bionic libc
+You can report any other issues using github and I will try to fix them.
