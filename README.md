@@ -21,9 +21,11 @@ Following tools still doesn't work:
 
 Installation
 ------------
-- At first you need to set CC variable e.g.:
+- At first you need to set CC, AR and RANLIB variables e.g.:
 ```
 export CC=arm-linux-androidebi-gcc
+export AR=arm-linux-androidebi-ar
+export RANLIB=arm-linux-androidebi-ranlib
 ```
 - Then configure with:
 ```
