@@ -3,6 +3,7 @@
    1998-07-01 - Arnaldo Carvalho de Melo - GNU gettext instead of catgets
    1999-10-07 - Kurt Garloff		 - for -host and gws: prefer host names
 						over networks (or even reject)
+   2003-10-11 - Maik Broemme		 - gcc 3.x warnign fixes (default: break;)
  */
 
 #include "config.h"
@@ -104,7 +105,6 @@ static int INET_setroute(int action, int options, char **args)
        isnet = 1; break;
     case 2:
        isnet = 0; break;
-    default:;
     }
 
     /* Fill in the other fields. */

@@ -5,14 +5,10 @@
 #		NET-3 Networking Distribution for the LINUX operating
 #		system.
 #
-# Version:	2001-02-13
-#
 # Author:	Bernd Eckenfels <net-tools@lina.inka.de>
 #		Copyright 1995-1996 Bernd Eckenfels, Germany
 #
-# URLs:		ftp://ftp.inka.de/pub/comp/Linux/networking/NetTools/ 
-#		ftp://ftp.linux.org.uk/pub/linux/Networking/PROGRAMS/NetTools/
-#		http://www.inka.de/sites/lina/linux/NetTools/index_en.html
+# URLs:		http://net-tools.sourceforge.net/
 #
 # Based on:	Fred N. van Kempen, <waltje@uwalt.nl.mugnet.org>
 #		Copyright 1988-1993 MicroWalt Corporation
@@ -22,55 +18,16 @@
 #		Alan Cox <A.Cox@swansea.ac.uk>
 #		Copyright 1993-1994 Swansea University Computer Society
 #
-# Be careful! 
+# Be careful!
 # This Makefile doesn't describe complete dependencies for all include files.
-# If you change include files you might need to do make clean. 
-#
-#	{1.20}	Bernd Eckenfels:	Even more modifications for the new 
-#					package layout
-#	{1.21}	Bernd Eckenfels:	Check if config.in is newer than 
-#					config.status
-#	{1.22}  Bernd Eckenfels:	Include ypdomainname and nisdomainame
-#
-#	1.3.50-BETA6 private Release
-#				
-#960125	{1.23}	Bernd Eckenfels:	Peter Tobias' rewrite for 
-#					makefile-based installation
-#	1.3.50-BETA6a private Release
-#
-#960201 {1.24}	Bernd Eckenfels:	net-features.h added
-#
-#960201 1.3.50-BETA6b private Release
-#
-#960203 1.3.50-BETA6c private Release
-#
-#960204 1.3.50-BETA6d private Release
-#
-#960204 {1.25}	Bernd Eckenfels:	DISTRIBUTION added
-#
-#960205 1.3.50-BETA6e private Release
-#
-#960206	{1.26}	Bernd Eckenfels:	afrt.o removed (cleaner solution)
-#
-#960215 1.3.50-BETA6f Release
-#
-#960216 {1.30}	Bernd Eckenfels:	net-lib support
-#960322 {1.31}	Bernd Eckenfels:	moveable netlib, TOPDIR
-#960424 {1.32}	Bernd Eckenfels:	included the URLs in the Comment
-#
-#960514 1.31-alpha release
-#
-#960518 {1.33}	Bernd Eckenfels:	-I/usr/src/linux/include comment added
-#
-#	This program is free software; you can redistribute it
-#	and/or  modify it under  the terms of  the GNU General
-#	Public  License as  published  by  the  Free  Software
-#	Foundation;  either  version 2 of the License, or  (at
-#	your option) any later version.
+# If you change include files you might need to do make clean.
 #
 
-# set the base of the Installation 
+# set the base of the Installation
 # BASEDIR = /mnt
+BASEDIR ?= $(DESTDIR)
+BINDIR ?= /bin
+SBINDIR ?= /sbin
 
 # path to the net-lib support library. Default: lib
 NET_LIB_PATH = lib
@@ -88,20 +45,26 @@ endif
 
 # Compiler and Linker Options
 # You may need to uncomment and edit these if you are using libc5 and IPv6.
-COPTS = -D_GNU_SOURCE -O2 -Wall -g # -I/usr/inet6/include
-ifeq ($(origin LOPTS), undefined)
-LOPTS = 
-endif
+CFLAGS ?= -O2 -g
+CFLAGS += -Wall
+CFLAGS += -fno-strict-aliasing # code needs a lot of work before strict aliasing is safe
+CPPFLAGS += -D_GNU_SOURCE
 RESLIB = # -L/usr/inet6/lib -linet6
 
 ifeq ($(HAVE_AFDECnet),1)
 DNLIB = -ldnet
 endif
 
+ifeq ($(origin CC), undefined)
+CC	= gcc
+endif
+LD	= $(CC)
+PKG_CONFIG ?= pkg-config
+
 # -------- end of user definitions --------
 
-MAINTAINER = Philip.Blundell@pobox.com
-RELEASE	   = 1.60
+MAINTAINER = net-tools-devel@lists.sourceforge.net
+RELEASE	   = 2.10-alpha
 
 .EXPORT_ALL_VARIABLES:
 
@@ -113,22 +76,22 @@ endif
 
 NET_LIB = $(NET_LIB_PATH)/lib$(NET_LIB_NAME).a
 
-CFLAGS	= $(COPTS) -I. -idirafter ./include/ -I$(NET_LIB_PATH) -include bionic-fixup/Xprotoent.h
-LDFLAGS	= $(LOPTS) -L$(NET_LIB_PATH)
+ifeq ($(HAVE_SELINUX),1)
+SE_PC_CFLAGS := $(shell $(PKG_CONFIG) --cflags libselinux)
+SE_PC_LIBS := $(shell $(PKG_CONFIG) --libs libselinux || echo -lselinux)
+SELIB = $(SE_PC_LIBS)
+CPPFLAGS += $(SE_PC_CFLAGS)
+endif
+
+CPPFLAGS += -I. -I$(TOPDIR)/include -I$(NET_LIB_PATH)
+LDFLAGS  += -L$(NET_LIB_PATH)
 
 SUBDIRS	= man/ $(NET_LIB_PATH)/
 
-ifeq ($(origin CC), undefined)
-CC	= gcc
-endif
-LD	= $(CC)
-
 NLIB	= -l$(NET_LIB_NAME)
 
-MDEFINES = COPTS='$(COPTS)' LOPTS='$(LOPTS)' TOPDIR='$(TOPDIR)'
-
-%.o:		%.c config.h version.h intl.h net-features.h $<
-		$(CC) $(CFLAGS) -c $<
+%.o:		%.c config.h version.h intl.h lib/net-features.h $<
+		$(CC) $(CFLAGS) $(CPPFLAGS) -c $<
 
 all:		config.h version.h subdirs $(PROGS)
 
@@ -154,12 +117,21 @@ clobber: 	clean
 		@for i in $(SUBDIRS); do (cd $$i && $(MAKE) clobber) ; done
 
 
-dist: 		clobber
-		@echo Creating net-tools-$(RELEASE) in ..
-		@tar -cvz -f ../net-tools-$(RELEASE).tar.gz -C .. net-tools
+dist:
+		rm -rf net-tools-$(RELEASE)
+		git archive --prefix=net-tools-$(RELEASE)/ HEAD | tar xf -
+		$(MAKE) -C net-tools-$(RELEASE)/po $@
+		tar cf - net-tools-$(RELEASE)/ | xz > net-tools-$(RELEASE).tar.xz
+		rm -rf net-tools-$(RELEASE)
 
+distcheck:	dist
+		tar xf net-tools-$(RELEASE).tar.xz
+		yes "" | $(MAKE) -C net-tools-$(RELEASE) config
+		$(MAKE) -C net-tools-$(RELEASE)
+		rm -rf net-tools-$(RELEASE)
+		@printf "\nThe tarball is ready to go:\n%s\n" "`du -b net-tools-$(RELEASE).tar.xz`"
 
-config.h: 	config.in Makefile 
+config.h: 	config.in Makefile
 		@echo "Configuring the Linux net-tools (NET-3 Base Utilities)..." ; echo
 		@if [ config.status -nt config.in ]; \
 			then ./configure.sh config.status; \
@@ -175,85 +147,91 @@ $(NET_LIB):	config.h version.h intl.h libdir
 
 i18n.h:		i18ndir
 
-libdir:
-		@$(MAKE) -C $(NET_LIB_PATH) $(MDEFINES)
+libdir:		version.h
+		@$(MAKE) -C $(NET_LIB_PATH)
 
 i18ndir:
 		@$(MAKE) -C po
 
-subdirs:
-		@for i in $(SUBDIRS); do $(MAKE) -C $$i $(MDEFINES) ; done
+# use libdir target for lib/ to avoid parallel build issues
+subdirs:	libdir
+		@for i in $(SUBDIRS:$(NET_LIB_PATH)/=); do $(MAKE) -C $$i || exit $$? ; done
 
 ifconfig:	$(NET_LIB) ifconfig.o
-		$(CC) $(LDFLAGS) -o ifconfig ifconfig.o $(NLIB) $(RESLIB)
-		
-nameif:	nameif.o
-		$(CC) $(LDFLAGS) -o nameif nameif.o 
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ ifconfig.o $(NLIB) $(RESLIB)
+
+nameif:		$(NET_LIB) nameif.o
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ nameif.o $(NLIB) $(RESLIB)
 
 hostname:	hostname.o
-		$(CC) $(LDFLAGS) -o hostname hostname.o $(DNLIB)
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ hostname.o $(DNLIB)
 
 route:		$(NET_LIB) route.o
-		$(CC) $(LDFLAGS) -o route route.o $(NLIB) $(RESLIB)
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ route.o $(NLIB) $(RESLIB)
 
 arp:		$(NET_LIB) arp.o
-		$(CC) $(LDFLAGS) -o arp arp.o $(NLIB) $(RESLIB)
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ arp.o $(NLIB) $(RESLIB)
 
 rarp:		$(NET_LIB) rarp.o
-		$(CC) $(LDFLAGS) -o rarp rarp.o $(NLIB)
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ rarp.o $(NLIB)
 
 slattach:	$(NET_LIB) slattach.o
-		$(CC) $(LDFLAGS) -o slattach slattach.o $(NLIB)
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ slattach.o $(NLIB)
 
 plipconfig:	$(NET_LIB) plipconfig.o
-		$(CC) $(LDFLAGS) -o plipconfig plipconfig.o $(NLIB)
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ plipconfig.o $(NLIB)
 
 netstat:	$(NET_LIB) netstat.o statistics.o
-		$(CC) $(LDFLAGS) -o netstat netstat.o statistics.o $(NLIB) $(RESLIB)
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ netstat.o statistics.o $(NLIB) $(RESLIB) $(SELIB)
 
 iptunnel:	$(NET_LIB) iptunnel.o
-		$(CC) $(LDFLAGS) -o iptunnel iptunnel.o $(NLIB) $(RESLIB)
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ iptunnel.o $(NLIB) $(RESLIB)
 
 ipmaddr:	$(NET_LIB) ipmaddr.o
-		$(CC) $(LDFLAGS) -o ipmaddr ipmaddr.o $(NLIB) $(RESLIB)
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ ipmaddr.o $(NLIB) $(RESLIB)
 
-mii-tool:	mii-tool.o
-		$(CC) $(LDFLAGS) -o mii-tool mii-tool.o
+mii-tool:	$(NET_LIB) mii-tool.o
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ mii-tool.o $(NLIB) $(RESLIB)
 
 installbin:
-	install -m 0755 -d ${BASEDIR}/sbin
-	install -m 0755 -d ${BASEDIR}/bin
-	install -m 0755 arp        ${BASEDIR}/sbin
-	install -m 0755 hostname   ${BASEDIR}/bin
-	install -m 0755 ifconfig   ${BASEDIR}/sbin
-	install -m 0755 nameif     ${BASEDIR}/sbin
-	install -m 0755 netstat    ${BASEDIR}/bin
-	install -m 0755 plipconfig $(BASEDIR)/sbin
-	install -m 0755 rarp       ${BASEDIR}/sbin
-	install -m 0755 route      ${BASEDIR}/sbin
-	install -m 0755 slattach   $(BASEDIR)/sbin
+	@echo
+	@echo "######################################################"
+	@echo "Notice: ifconfig and route are now installed into /bin"
+	@echo "######################################################"
+	@echo
+	install -m 0755 -d ${BASEDIR}${SBINDIR}
+	install -m 0755 -d ${BASEDIR}${BINDIR}
+	install -m 0755 arp        ${BASEDIR}${SBINDIR}
+	install -m 0755 hostname   ${BASEDIR}${BINDIR}
+	install -m 0755 ifconfig   ${BASEDIR}${BINDIR}
+	install -m 0755 nameif     ${BASEDIR}${SBINDIR}
+	install -m 0755 netstat    ${BASEDIR}${BINDIR}
+	install -m 0755 plipconfig $(BASEDIR)${SBINDIR}
+	install -m 0755 rarp       ${BASEDIR}${SBINDIR}
+	install -m 0755 route      ${BASEDIR}${BINDIR}
+	install -m 0755 slattach   $(BASEDIR)${SBINDIR}
 ifeq ($(HAVE_IP_TOOLS),1)
-	install -m 0755 ipmaddr    $(BASEDIR)/sbin
-	install -m 0755 iptunnel   $(BASEDIR)/sbin
+	install -m 0755 ipmaddr    $(BASEDIR)${SBINDIR}
+	install -m 0755 iptunnel   $(BASEDIR)${SBINDIR}
 endif
 ifeq ($(HAVE_MII),1)
-	install -m 0755 mii-tool   $(BASEDIR)/sbin
+	install -m 0755 mii-tool   $(BASEDIR)${SBINDIR}
 endif
-	ln -fs hostname $(BASEDIR)/bin/dnsdomainname
-	ln -fs hostname $(BASEDIR)/bin/ypdomainname
-	ln -fs hostname $(BASEDIR)/bin/nisdomainname
-	ln -fs hostname $(BASEDIR)/bin/domainname
+	ln -fs hostname $(BASEDIR)${BINDIR}/dnsdomainname
+	ln -fs hostname $(BASEDIR)${BINDIR}/ypdomainname
+	ln -fs hostname $(BASEDIR)${BINDIR}/nisdomainname
+	ln -fs hostname $(BASEDIR)${BINDIR}/domainname
 ifeq ($(HAVE_AFDECnet),1)
-	ln -fs hostname $(BASEDIR)/bin/nodename
+	ln -fs hostname $(BASEDIR)${BINDIR}/nodename
 endif
 
 savebin:
-	@for i in ${BASEDIR}/sbin/arp ${BASEDIR}/sbin/ifconfig \
-                 ${BASEDIR}/bin/netstat \
-		 ${BASEDIR}/sbin/rarp ${BASEDIR}/sbin/route \
-		 ${BASEDIR}/bin/hostname ${BASEDIR}/bin/ypdomainname \
-                 ${BASEDIR}/bin/dnsdomainname ${BASEDIR}/bin/nisdomainname \
-		 ${BASEDIR}/bin/domainname ; do \
+	@for i in ${BASEDIR}${SBINDIR}/arp ${BASEDIR}${SBINDIR}/ifconfig \
+                 ${BASEDIR}${BINDIR}/netstat \
+		 ${BASEDIR}${SBINDIR}/rarp ${BASEDIR}${SBINDIR}/route \
+		 ${BASEDIR}${BINDIR}/hostname ${BASEDIR}${BINDIR}/ypdomainname \
+                 ${BASEDIR}${BINDIR}/dnsdomainname ${BASEDIR}${BINDIR}/nisdomainname \
+		 ${BASEDIR}${BINDIR}/domainname ; do \
 		 [ -f $$i ] && cp -f $$i $$i.old ; done ; echo Saved.
 
 installdata:

@@ -28,11 +28,10 @@ struct user_net_device_stats {
 };
 
 struct interface {
-    struct interface *next, *prev; 
+    struct interface *next, *prev;
     char name[IFNAMSIZ];	/* interface name        */
     short type;			/* if type               */
     short flags;		/* various flags         */
-    int metric;			/* routing metric        */
     int mtu;			/* MTU value             */
     int tx_queue_len;		/* transmit queue length */
     struct ifmap map;		/* hardware setup        */
@@ -64,12 +63,16 @@ struct interface {
 extern int if_fetch(struct interface *ife);
 
 extern int for_all_interfaces(int (*)(struct interface *, void *), void *);
-extern int free_interface_list(void);
+extern int if_cache_free(void);
 extern struct interface *lookup_interface(char *name);
 extern int if_readlist(void);
 
 extern int do_if_fetch(struct interface *ife);
 extern int do_if_print(struct interface *ife, void *cookie);
+
+extern int    procnetdev_version(char *buf);
+extern int    get_dev_fields(char *bp, struct interface *ife);
+extern char * get_name(char *name, char *p);
 
 extern void ife_print(struct interface *ptr);
 
@@ -84,7 +87,7 @@ extern const char *if_port_text[][4];
 #endif
 
 #if !defined(ifr_qlen)
-/* Actually it is ifru_ivalue, but that is not present in 2.0 kernel headers */   
+/* Actually it is ifru_ivalue, but that is not present in 2.0 kernel headers */
 #define ifr_qlen        ifr_ifru.ifru_mtu
 #endif
 

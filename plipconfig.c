@@ -4,7 +4,7 @@
    Copyright (c) 1994 John Paul Morrison (VE7JPM).
 
    version 0.2
-   
+
    Changed by Alan Cox, to reflect the way SIOCDEVPRIVATE is meant to work
    and for the extra parameter added by Niibe.
 
@@ -42,31 +42,27 @@
 #include "intl.h"
 #include "net-support.h"
 #include "version.h"
+#include "util.h"
 
-int opt_a = 0;
-int opt_i = 0;
-int opt_v = 0;
 int skfd = -1;
 
 struct ifreq ifr;
 struct plipconf *plip;
 
-char *Release = RELEASE,
-     *Version = "plipconfig 0.2",
-     *Signature = "John Paul Morrison, Alan Cox et al.";
+static char *Release = RELEASE, *Signature = "John Paul Morrison, Alan Cox et al.";
 
 static void version(void)
 {
-    printf("%s\n%s\n%s\n", Release, Version, Signature);
+    printf("%s\n%s\n", Release, Signature);
     exit(E_VERSION);
 }
 
 void usage(void)
 {
-    fprintf(stderr, _("Usage: plipconfig [-a] [-i] [-v] interface\n"));
-    fprintf(stderr, _("                  [nibble NN] [trigger NN]\n"));
+    fprintf(stderr, _("Usage: plipconfig interface [nibble NN] [trigger NN]\n"));
     fprintf(stderr, _("       plipconfig -V | --version\n"));
-    exit(-1);
+    fprintf(stderr, _("       plipconfig -h | --help\n"));
+    exit(E_USAGE);
 }
 
 void print_plip(void)
@@ -93,12 +89,10 @@ int main(int argc, char **argv)
     argc--;
     argv++;
     while (argv[0] && *argv[0] == '-') {
-	if (!strcmp(*argv, "-a"))
-	    opt_a = 1;
-	if (!strcmp(*argv, "-v"))
-	    opt_v = 1;
 	if (!strcmp(*argv, "-V") || !strcmp(*argv, "--version"))
 	    version();
+	else
+            usage();
 	argv++;
 	argc--;
     }
@@ -107,7 +101,7 @@ int main(int argc, char **argv)
 	usage();
 
     spp = argv;
-    strncpy(ifr.ifr_name, *spp++, IFNAMSIZ);
+    safe_strncpy(ifr.ifr_name, *spp++, IFNAMSIZ);
     plip=(struct plipconf *)&ifr.ifr_data;
 
     plip->pcmd = PLIP_GET_TIMEOUT;	/* get current settings for device */

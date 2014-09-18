@@ -32,6 +32,7 @@
 
 #include "config.h"
 #include "intl.h"
+#include "util.h"
 #include "util-ank.h"
 #include "net-support.h"
 #include "version.h"
@@ -44,13 +45,11 @@ int  filter_family;
 #define NEWADDR		1
 #define DELADDR		2
 
-char *Release = RELEASE,
-     *Version = "ipmaddr 1.1",
-     *Signature = "Alexey Kuznetsov, <kuznet@ms2.inr.ac.ru>";
+static char *Release = RELEASE, *Signature = "Alexey Kuznetsov";
 
 static void version(void)
 {
-	printf("%s\n%s\n%s\n", Release, Version, Signature);
+	printf("%s\n%s\n", Release, Signature);
 	exit(E_VERSION);
 }
 
@@ -61,7 +60,7 @@ static void usage(void)
 	fprintf(stderr, _("Usage: ipmaddr [ add | del ] MULTIADDR dev STRING\n"));
 	fprintf(stderr, _("       ipmaddr show [ dev STRING ] [ ipv4 | ipv6 | link | all ]\n"));
 	fprintf(stderr, _("       ipmaddr -V | -version\n"));
-	exit(-1);
+	exit(E_USAGE);
 }
 
 static void print_lla(FILE *fp, int len, unsigned char *addr)
@@ -75,7 +74,7 @@ static void print_lla(FILE *fp, int len, unsigned char *addr)
 	}
 }
 
-static int parse_lla(char *str, unsigned char *addr)
+static int parse_lla(char *str, char *addr)
 {
 	int len=0;
 
@@ -159,8 +158,7 @@ void read_dev_mcast(struct ma_info **result_p)
 
 		len = parse_hex(hexa, (unsigned char*)&m.addr.data);
 		if (len >= 0) {
-			struct ma_info *ma = malloc(sizeof(m));
-
+			struct ma_info *ma = xmalloc(sizeof(m));
 			memcpy(ma, &m, sizeof(m));
 			ma->addr.bytelen = len;
 			ma->addr.bitlen = len<<3;
@@ -174,22 +172,21 @@ void read_dev_mcast(struct ma_info **result_p)
 
 void read_igmp(struct ma_info **result_p)
 {
-	struct ma_info m;
+	struct ma_info m, *ma = NULL;
 	char buf[256];
 	FILE *fp = fopen(_PATH_PROCNET_IGMP, "r");
 
 	if (!fp)
 		return;
 	memset(&m, 0, sizeof(m));
-	fgets(buf, sizeof(buf), fp);
+	if (fgets(buf, sizeof(buf), fp))
+		/* eat line */;
 
 	m.addr.family = AF_INET;
 	m.addr.bitlen = 32;
 	m.addr.bytelen = 4;
 
 	while (fgets(buf, sizeof(buf), fp)) {
-		struct ma_info *ma = malloc(sizeof(m));
-
 		if (buf[0] != '\t') {
 			sscanf(buf, "%d%s", &m.index, m.name);
 			continue;
@@ -200,7 +197,7 @@ void read_igmp(struct ma_info **result_p)
 
 		sscanf(buf, "%08x%d", (__u32*)&m.addr.data, &m.users);
 
-		ma = malloc(sizeof(m));
+		ma = xmalloc(sizeof(m));
 		memcpy(ma, &m, sizeof(m));
 		maddr_ins(result_p, ma);
 	}
@@ -231,8 +228,7 @@ void read_igmp6(struct ma_info **result_p)
 
 		len = parse_hex(hexa, (unsigned char*)&m.addr.data);
 		if (len >= 0) {
-			struct ma_info *ma = malloc(sizeof(m));
-
+			struct ma_info *ma = xmalloc(sizeof(m));
 			memcpy(ma, &m, sizeof(m));
 
 			ma->addr.bytelen = len;
@@ -291,13 +287,15 @@ static void print_mlist(FILE *fp, struct ma_info *list)
 static int multiaddr_list(int argc, char **argv)
 {
 	struct ma_info *list = NULL;
+	size_t l;
 
 	while (argc > 0) {
 		if (strcmp(*argv, "dev") == 0) {
 			NEXT_ARG();
-			if (filter_dev[0])
+			l = strlen(*argv);
+			if (l <= 0 || l >= sizeof(filter_dev))
 				usage();
-			strcpy(filter_dev, *argv);
+			strncpy(filter_dev, *argv, sizeof (filter_dev));
 		} else if (strcmp(*argv, "all") == 0) {
 			filter_family = AF_UNSPEC;
 		} else if (strcmp(*argv, "ipv4") == 0) {
@@ -307,9 +305,10 @@ static int multiaddr_list(int argc, char **argv)
 		} else if (strcmp(*argv, "link") == 0) {
 			filter_family = AF_PACKET;
 		} else {
-			if (filter_dev[0])
+			l = strlen(*argv);
+			if (l <= 0 || l >= sizeof(filter_dev))
 				usage();
-			strcpy(filter_dev, *argv);
+			strncpy(filter_dev, *argv, sizeof (filter_dev));
 		}
 		argv++; argc--;
 	}
@@ -401,7 +400,7 @@ int main(int argc, char **argv)
 		basename = argv[0];
 	else
 		basename++;
-	
+
 	while (argc > 1) {
 		if (argv[1][0] != '-')
 			break;

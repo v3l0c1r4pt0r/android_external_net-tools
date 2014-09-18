@@ -6,23 +6,22 @@
  * Usage:       hostname [-d|-f|-s|-a|-i|-y|-n]
  *              hostname [-h|-V]
  *              hostname {name|-F file}
- *              dnsdmoainname   
+ *              dnsdmoainname
  *              nisdomainname {name|-F file}
  *
- * Version:     hostname 1.96 (1996-02-18)
+ * Version:     hostname 1.101 (2003-10-11)
  *
  * Author:      Peter Tobias <tobias@et-inf.fho-emden.de>
  *
  * Changes:
- *      {1.90}  Peter Tobias :          Added -a and -i options.
- *      {1.91}  Bernd Eckenfels :       -v,-V rewritten, long_opts 
- *                                      (major rewrite), usage.
- *960120 {1.95} Bernd Eckenfels :       -y/nisdomainname - support for get/
- *                                      setdomainname added 
- *960218 {1.96} Bernd Eckenfels :       netinet/in.h added
- *980629 {1.97} Arnaldo Carvalho de Melo : gettext instead of catgets for i18n
- *20000213 {1.99} Arnaldo Carvalho de Melo : fixed some i18n strings
+ *         {1.90}  Peter Tobias : Added -a and -i options.
+ *         {1.91}  Bernd Eckenfels : -v,-V rewritten, long_opts (major rewrite), usage.
+ *19960120 {1.95}  Bernd Eckenfels : -y/nisdomainname - support for get/setdomainname added
+ *19960218 {1.96}  Bernd Eckenfels : netinet/in.h added
+ *19980629 {1.97}  Arnaldo Carvalho de Melo : gettext instead of catgets for i18n
+ *20000213 {1.99}  Arnaldo Carvalho de Melo : fixed some i18n strings
  *20010404 {1.100} Arnaldo Carvalho de Melo: use setlocale
+ *20031011 {1.101} Maik Broemme: gcc 3.x fixes (default: break)
  *
  *              This program is free software; you can redistribute it
  *              and/or  modify it under  the terms of  the GNU General
@@ -31,7 +30,9 @@
  *              your option) any later version.
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
 #include <netdb.h>
@@ -41,13 +42,19 @@
 #include <arpa/inet.h>
 #include "config.h"
 #include "version.h"
+#include "net-support.h"
 #include "../intl.h"
+
+#if HAVE_AFINET6
+#include <sys/socket.h> /* for PF_INET6 */
+#include <sys/types.h>  /* for inet_ntop */
+#endif
 
 #if HAVE_AFDECnet
 #include <netdnet/dn.h>
 #endif
 
-char *Release = RELEASE, *Version = "hostname 1.100 (2001-04-14)";
+static char *Release = RELEASE;
 
 static char *program_name;
 static int opt_v;
@@ -72,12 +79,13 @@ static void setnname(char *nname)
     if (setnodename(nname, strlen(nname))) {
         switch(errno) {
         case EPERM:
-            fprintf(stderr, _("%s: you must be root to change the node name\n"), program_name);
+            fprintf(stderr, _("%s: you don't have permission to set the node name\n"), program_name);
             break;
         case EINVAL:
             fprintf(stderr, _("%s: name too long\n"), program_name);
             break;
         default:
+	    break;
         }
 	exit(1);
     }
@@ -92,12 +100,11 @@ static void sethname(char *hname)
     if (sethostname(hname, strlen(hname))) {
 	switch (errno) {
 	case EPERM:
-	    fprintf(stderr, _("%s: you must be root to change the host name\n"), program_name);
+	    fprintf(stderr, _("%s: you don't have permission to set the host name\n"), program_name);
 	    break;
 	case EINVAL:
 	    fprintf(stderr, _("%s: name too long\n"), program_name);
 	    break;
-	default:;
 	}
 	exit(1);
     };
@@ -111,12 +118,11 @@ static void setdname(char *dname)
     if (setdomainname(dname, strlen(dname))) {
 	switch (errno) {
 	case EPERM:
-	    fprintf(stderr, _("%s: you must be root to change the domain name\n"), program_name);
+	    fprintf(stderr, _("%s: you don't have permission to set the domain name\n"), program_name);
 	    break;
 	case EINVAL:
 	    fprintf(stderr, _("%s: name too long\n"), program_name);
 	    break;
-	default:;
 	}
 	exit(1);
     };
@@ -125,15 +131,23 @@ static void setdname(char *dname)
 static void showhname(char *hname, int c)
 {
     struct hostent *hp;
+#if HAVE_AFINET6
+    struct in6_addr **ip6;
+#endif
     register char *p, **alias;
     struct in_addr **ip;
 
     if (opt_v)
 	fprintf(stderr, _("Resolving `%s' ...\n"), hname);
-    if (!(hp = gethostbyname(hname))) {
+    if (
+#if HAVE_AFINET6
+        !(hp = gethostbyname2(hname, PF_INET6)) &&
+#endif
+        !(hp = gethostbyname(hname))) {
 	herror(program_name);
 	exit(1);
     }
+
     if (opt_v) {
 	fprintf(stderr, _("Result: h_name=`%s'\n"),
 		hp->h_name);
@@ -142,11 +156,28 @@ static void showhname(char *hname, int c)
 	while (alias[0])
 	    fprintf(stderr, _("Result: h_aliases=`%s'\n"),
 		    *alias++);
-
-	ip = (struct in_addr **) hp->h_addr_list;
-	while (ip[0])
-	    fprintf(stderr, _("Result: h_addr_list=`%s'\n"),
-		    inet_ntoa(**ip++));
+#if HAVE_AFINET6
+	    if (hp->h_addrtype == PF_INET6) {
+		char addr[INET6_ADDRSTRLEN + 1];
+		addr[INET6_ADDRSTRLEN] = '\0';
+		ip6 = (struct in6_addr **) hp->h_addr_list;
+		while (ip6[0]) {
+		    if (inet_ntop(PF_INET6, *ip6++, addr, INET6_ADDRSTRLEN))
+			fprintf(stderr, _("Result: h_addr_list=`%s'\n"), addr);
+		    else if (errno == EAFNOSUPPORT)
+			fprintf(stderr, _("%s: protocol family not supported\n"),
+				program_name);
+		    else if (errno == ENOSPC)
+			fprintf(stderr, _("%s: name too long\n"), program_name);
+	    }
+	} else
+#endif
+	{
+	    ip = (struct in_addr **) hp->h_addr_list;
+	    while (ip[0])
+		fprintf(stderr, _("Result: h_addr_list=`%s'\n"),
+			inet_ntoa(**ip++));
+	}
     }
     if (!(p = strchr(hp->h_name, '.')) && (c == 'd'))
 	return;
@@ -158,8 +189,29 @@ static void showhname(char *hname, int c)
 	printf("\n");
 	break;
     case 'i':
-	while (hp->h_addr_list[0])
-	    printf("%s ", inet_ntoa(*(struct in_addr *) *hp->h_addr_list++));
+#if HAVE_AFINET6
+	if (hp->h_addrtype == PF_INET6) {
+	    char addr[INET6_ADDRSTRLEN + 1];
+	    addr[INET6_ADDRSTRLEN] = '\0';
+	    while (hp->h_addr_list[0]) {
+		if (inet_ntop(PF_INET6, (struct in6_addr *)*hp->h_addr_list++,
+			      addr, INET6_ADDRSTRLEN)) {
+		    printf("%s ", addr);
+		} else if (errno == EAFNOSUPPORT) {
+		    fprintf(stderr, _("\n%s: protocol family not supported\n"),
+			    program_name);
+		    exit(1);
+		} else if (errno == ENOSPC) {
+		    fprintf(stderr, _("\n%s: name too long\n"), program_name);
+		    exit(1);
+		}
+	    }
+	} else
+#endif
+	{
+	    while (hp->h_addr_list[0])
+		printf("%s ", inet_ntoa(*(struct in_addr *)*hp->h_addr_list++));
+	}
 	printf("\n");
 	break;
     case 'd':
@@ -173,7 +225,6 @@ static void showhname(char *hname, int c)
 	    *p = '\0';
 	printf("%s\n", hp->h_name);
 	break;
-    default:;
     }
 }
 
@@ -215,8 +266,8 @@ static void setfilename(char *name, int what)
 
 static void version(void)
 {
-    fprintf(stderr, "%s\n%s\n", Release, Version);
-    exit(5); /* E_VERSION */
+    fprintf(stderr, "%s\n", Release);
+    exit(E_VERSION);
 }
 
 static void usage(void)
@@ -247,7 +298,7 @@ static void usage(void)
 "   FQDN (Fully Qualified Domain Name) and the DNS domain name (which is\n"
 "   part of the FQDN) in the /etc/hosts file.\n"));
 
-    exit(4); /* E_USAGE */
+    exit(E_USAGE);
 }
 
 
@@ -326,11 +377,12 @@ int main(int argc, char **argv)
 	    break;
 	case 'V':
 	    version();
+	    break; // not reached
 	case '?':
 	case 'h':
 	default:
 	    usage();
-
+	    break; // not reached
 	};
 
 
@@ -371,7 +423,10 @@ int main(int argc, char **argv)
 	    setdname(argv[optind]);
 	    break;
 	}
-	getdomainname(myname, sizeof(myname));
+	if (getdomainname(myname, sizeof(myname)) < 0) {
+	    perror("getdomainname()");
+	    exit(1);
+	}
 	if (opt_v)
 	    fprintf(stderr, _("getdomainname()=`%s'\n"), myname);
 	printf("%s\n", myname);

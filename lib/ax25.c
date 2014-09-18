@@ -47,7 +47,7 @@ static char AX25_errmsg[128];
 
 extern struct aftype ax25_aftype;
 
-static char *AX25_print(unsigned char *ptr)
+static const char *AX25_print(const char *ptr)
 {
     static char buff[8];
     int i;
@@ -66,7 +66,7 @@ static char *AX25_print(unsigned char *ptr)
 
 
 /* Display an AX.25 socket address. */
-static char *
+static const char *
  AX25_sprint(struct sockaddr *sap, int numeric)
 {
     static char buf[64];
@@ -76,10 +76,15 @@ static char *
     return (AX25_print(((struct sockaddr_ax25 *) sap)->sax25_call.ax25_call));
 }
 
+#ifdef DEBUG
+#define _DEBUG 1
+#else
+#define _DEBUG 0
+#endif
 
 static int AX25_input(int type, char *bufp, struct sockaddr *sap)
 {
-    unsigned char *ptr;
+    char *ptr;
     char *orig, c;
     int i;
 
@@ -95,9 +100,8 @@ static int AX25_input(int type, char *bufp, struct sockaddr *sap)
 	    c = toupper(c);
 	if (!(isupper(c) || isdigit(c))) {
 	    safe_strncpy(AX25_errmsg, _("Invalid callsign"), sizeof(AX25_errmsg));
-#ifdef DEBUG
-	    fprintf(stderr, "ax25_input(%s): %s !\n", AX25_errmsg, orig);
-#endif
+	    if (_DEBUG)
+		fprintf(stderr, "ax25_input(%s): %s !\n", AX25_errmsg, orig);
 	    errno = EINVAL;
 	    return (-1);
 	}
@@ -107,10 +111,9 @@ static int AX25_input(int type, char *bufp, struct sockaddr *sap)
 
     /* Callsign too long? */
     if ((i == 6) && (*bufp != '-') && (*bufp != '\0')) {
-	strcpy(AX25_errmsg, _("Callsign too long"));
-#ifdef DEBUG
-	fprintf(stderr, "ax25_input(%s): %s !\n", AX25_errmsg, orig);
-#endif
+	safe_strncpy(AX25_errmsg, _("Callsign too long"), sizeof(AX25_errmsg));
+	if (_DEBUG)
+	    fprintf(stderr, "ax25_input(%s): %s !\n", AX25_errmsg, orig);
 	errno = E2BIG;
 	return (-1);
     }
@@ -128,12 +131,12 @@ static int AX25_input(int type, char *bufp, struct sockaddr *sap)
     }
 
     /* All done. */
-#ifdef DEBUG
-    fprintf(stderr, "ax25_input(%s): ", orig);
-    for (i = 0; i < sizeof(ax25_address); i++)
-	fprintf(stderr, "%02X ", sap->sa_data[i] & 0377);
-    fprintf(stderr, "\n");
-#endif
+    if (_DEBUG) {
+	fprintf(stderr, "ax25_input(%s): ", orig);
+	for (i = 0; i < sizeof(ax25_address); i++)
+	    fprintf(stderr, "%02X ", sap->sa_data[i] & 0377);
+	fprintf(stderr, "\n");
+    }
 
     return (0);
 }

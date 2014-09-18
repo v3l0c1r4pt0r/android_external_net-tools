@@ -42,7 +42,7 @@
 #endif
 
 /* Display a ipx domain address. */
-static char *IPX_print(unsigned char *ptr)
+static const char *IPX_print(const char *ptr)
 {
     static char buff[64];
     struct sockaddr_ipx *sipx = (struct sockaddr_ipx *) (ptr - 2);
@@ -73,7 +73,7 @@ static char *IPX_print(unsigned char *ptr)
 
 
 /* Display a ipx domain address. */
-static char *IPX_sprint(struct sockaddr *sap, int numeric)
+static const char *IPX_sprint(struct sockaddr *sap, int numeric)
 {
     static char buf[64];
 
@@ -87,12 +87,10 @@ static int IPX_getsock(char *bufp, struct sockaddr *sap)
 {
     char *sp = bufp, *bp;
     unsigned int i;
-    unsigned char val;
     struct sockaddr_ipx *sipx = (struct sockaddr_ipx *) sap;
 
     sipx->sipx_port = 0;
 
-    val = 0;
     bp = (char *) sipx->sipx_node;
     for (i = 0; i < sizeof(sipx->sipx_node); i++) {
 	*sp = toupper(*sp);
@@ -132,6 +130,9 @@ static int IPX_input(int type, char *bufp, struct sockaddr *sap)
     unsigned long netnum;
     char *ep;
     int nbo;
+
+    if (!sai)
+    	return (-1);
 
     sai->sipx_family = AF_IPX;
     sai->sipx_network = htonl(0);

@@ -3,16 +3,24 @@ INSTALL_PROGRAM= ${INSTALL}
 INSTALL_DATA= ${INSTALL} -m 644
 INSTALLNLSDIR=${BASEDIR}/usr/share/locale
 
-TUPDATE = tupdate
+TUPDATE = msgmerge
 
 NLSPACKAGE = net-tools
 
 -include ../config.make
+ALL_POS = $(wildcard *.po)
+ALL_LANGS = $(ALL_POS:%.po=%)
+ALL_CATALOGS = $(ALL_LANGS:%=%.mo)
 ifeq ($(I18N),1)
-CATALOGS = de.mo fr.mo pt_BR.mo et_EE.mo cs.mo
+ifeq ($(LINGUAS),)
+LANGS = $(ALL_LANGS)
 else
-CATALOGS =
+LANGS = $(filter $(LINGUAS),$(ALL_LANGS))
 endif
+else
+LANGS =
+endif
+CATALOGS = $(LANGS:%=%.mo)
 
 POTFILES=../arp.c ../hostname.c ../ifconfig.c ../netstat.c ../rarp.c \
 	../route.c ../plipconfig.c ../iptunnel.c ../statistics.c \
@@ -44,12 +52,12 @@ $(NLSPACKAGE).pot: $(POTFILES)
 
 update-po: Makefile
 	$(MAKE) $(NLSPACKAGE).pot
-	catalogs='$(CATALOGS)'; \
-	for cat in $$catalogs; do \
-		lang=`echo $$cat | sed 's/.mo//'`; \
+	langs='$(ALL_LANGS)'; \
+	for lang in $$langs; do \
+		cat=$$lang.mo; \
 		mv $$lang.po $$lang.old.po; \
 		echo "$$lang:"; \
-		if $(TUPDATE) $(NLSPACKAGE).pot $$lang.old.po > $$lang.po; then \
+		if $(TUPDATE) $$lang.old.po $(NLSPACKAGE).pot > $$lang.po; then \
 		rm -f $$lang.old.po; \
 	else \
 	 	echo "tupdate for $$cat failed!"; \
@@ -61,18 +69,19 @@ update-po: Makefile
 clean:
 	rm -f *mo
 
+dist: $(ALL_CATALOGS)
+
 distclean: clean
 	rm -f .depend Makefile
 
 depend:
 
 install: $(CATALOGS)
-	catalogs='$(CATALOGS)'; \
-	for n in $$catalogs; do \
-	    l=`basename $$n .mo`; \
+	langs='$(LANGS)'; \
+	for l in $$langs; do \
 	    $(INSTALL) -m 755 -d $(INSTALLNLSDIR)/$$l; \
 	    $(INSTALL) -m 755 -d $(INSTALLNLSDIR)/$$l/LC_MESSAGES; \
-	    $(INSTALL) -m 644 $$n $(INSTALLNLSDIR)/$$l/LC_MESSAGES/net-tools.mo; \
+	    $(INSTALL) -m 644 $$l.mo $(INSTALLNLSDIR)/$$l/LC_MESSAGES/net-tools.mo; \
 	done
 
 %.mo: %.po

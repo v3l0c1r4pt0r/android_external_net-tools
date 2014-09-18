@@ -38,6 +38,7 @@
 #include "net-locale.h"
 #endif
 #include "intl.h"
+#include "util.h"
 
 static char X25_errmsg[128];
 
@@ -50,8 +51,8 @@ extern struct aftype x25_aftype;
 #endif
 
 
-static char *
-X25_print(unsigned char *ptr)
+static const char *
+X25_print(const char *ptr)
 {
   static char buff[X25_ADDR_LEN+1];
 
@@ -63,7 +64,7 @@ X25_print(unsigned char *ptr)
 
 
 /* Display an X.25 socket address. */
-static char *
+static const char *
 X25_sprint(struct sockaddr *sap, int numeric)
 {
   if (sap->sa_family == 0xFFFF || sap->sa_family == 0)
@@ -78,7 +79,7 @@ X25_sprint(struct sockaddr *sap, int numeric)
 static int
 X25_input(int type, char *bufp, struct sockaddr *sap)
 {
-  unsigned char *ptr;
+  char *ptr;
   char *p;
   unsigned int sigdigits;
 
@@ -88,9 +89,11 @@ X25_input(int type, char *bufp, struct sockaddr *sap)
 
   /* Address the correct length ? */
   if (strlen(bufp)>18) {
-        strcpy(X25_errmsg, _("Address can't exceed eighteen digits with sigdigits"));
+        safe_strncpy(X25_errmsg,
+                     _("Address can't exceed eighteen digits with sigdigits"),
+                     sizeof(X25_errmsg));
 #ifdef DEBUG
-        fprintf(stderr, "x25_input(%s): %s !\n", X25_errmsg, orig);
+        fprintf(stderr, "x25_input(%s): %s !\n", bufp, X25_errmsg);
 #endif
         errno = EINVAL;
         return(-1);
@@ -105,10 +108,11 @@ X25_input(int type, char *bufp, struct sockaddr *sap)
   }
 
   if (strlen(bufp) < 1 || strlen(bufp) > 15 || sigdigits > strlen(bufp)) {
-	*p = '/';
-        strcpy(X25_errmsg, _("Invalid address"));
+        if (p != NULL)
+                *p = '/';
+        safe_strncpy(X25_errmsg, _("Invalid address"), sizeof(X25_errmsg));
 #ifdef DEBUG
-        fprintf(stderr, "x25_input(%s): %s !\n", X25_errmsg, orig);
+        fprintf(stderr, "x25_input(%s): %s !\n", bufp, X25_errmsg);
 #endif
         errno = EINVAL;
         return(-1);
@@ -118,10 +122,7 @@ X25_input(int type, char *bufp, struct sockaddr *sap)
 
   /* All done. */
 #ifdef DEBUG
-  fprintf(stderr, "x25_input(%s): ", orig);
-  for (i = 0; i < sizeof(x25_address); i++)
-	fprintf(stderr, "%02X ", sap->sa_data[i] & 0377);
-  fprintf(stderr, "\n");
+  fprintf(stderr, "x25_input(%s)\n", bufp);
 #endif
 
   return sigdigits;
@@ -152,7 +153,7 @@ struct hwtype x25_hwtype = {
 };
 
 struct aftype x25_aftype =
-{   
+{
     "x25", NULL, /*"CCITT X.25", */ AF_X25, X25_ADDR_LEN,
     X25_print, X25_sprint, X25_input, X25_herror,
     X25_rprint, X25_rinput, NULL /* getmask */,

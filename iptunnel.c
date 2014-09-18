@@ -68,13 +68,11 @@
 
 #include "util-ank.h"
 
-char *Release = RELEASE,
-     *Version = "iptunnel 1.01",
-     *Signature = "Alexey Kuznetsov, <kuznet@ms2.inr.ac.ru>";
+static char *Release = RELEASE, *Signature = "Alexey Kuznetsov";
 
 static void version(void)
 {
-	printf("%s\n%s\n%s\n", Release, Version, Signature);
+	printf("%s\n%s\n", Release, Signature);
 	exit(E_VERSION);
 }
 
@@ -92,7 +90,7 @@ static void usage(void)
 	fprintf(stderr, _("       TOS  := { NUMBER | inherit }\n"));
 	fprintf(stderr, _("       TTL  := { 1..255 | inherit }\n"));
 	fprintf(stderr, _("       KEY  := { DOTTED_QUAD | NUMBER }\n"));
-	exit(-1);
+	exit(E_USAGE);
 }
 
 static int do_ioctl_get_ifindex(char *dev)
@@ -101,11 +99,12 @@ static int do_ioctl_get_ifindex(char *dev)
 	int fd;
 	int err;
 
-	strcpy(ifr.ifr_name, dev);
+	safe_strncpy(ifr.ifr_name, dev, IFNAMSIZ);
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	err = ioctl(fd, SIOCGIFINDEX, &ifr);
 	if (err) {
 		perror("ioctl");
+		close(fd);
 		return 0;
 	}
 	close(fd);
@@ -118,11 +117,12 @@ static int do_ioctl_get_iftype(char *dev)
 	int fd;
 	int err;
 
-	strcpy(ifr.ifr_name, dev);
+	safe_strncpy(ifr.ifr_name, dev, IFNAMSIZ);
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	err = ioctl(fd, SIOCGIFHWADDR, &ifr);
 	if (err) {
 		perror("ioctl");
+		close(fd);
 		return -1;
 	}
 	close(fd);
@@ -141,6 +141,7 @@ static char * do_ioctl_get_ifname(int idx)
 	err = ioctl(fd, SIOCGIFNAME, &ifr);
 	if (err) {
 		perror("ioctl");
+		close(fd);
 		return NULL;
 	}
 	close(fd);
@@ -155,7 +156,7 @@ static int do_get_ioctl(char *basedev, struct ip_tunnel_parm *p)
 	int fd;
 	int err;
 
-	strcpy(ifr.ifr_name, basedev);
+	safe_strncpy(ifr.ifr_name, basedev, IFNAMSIZ);
 	ifr.ifr_ifru.ifru_data = (void*)p;
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	err = ioctl(fd, SIOCGETTUNNEL, &ifr);
@@ -171,7 +172,7 @@ static int do_add_ioctl(int cmd, char *basedev, struct ip_tunnel_parm *p)
 	int fd;
 	int err;
 
-	strcpy(ifr.ifr_name, basedev);
+	safe_strncpy(ifr.ifr_name, basedev, IFNAMSIZ);
 	ifr.ifr_ifru.ifru_data = (void*)p;
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	err = ioctl(fd, cmd, &ifr);
@@ -187,7 +188,7 @@ static int do_del_ioctl(char *basedev, struct ip_tunnel_parm *p)
 	int fd;
 	int err;
 
-	strcpy(ifr.ifr_name, basedev);
+	safe_strncpy(ifr.ifr_name, basedev, IFNAMSIZ);
 	ifr.ifr_ifru.ifru_data = (void*)p;
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	err = ioctl(fd, SIOCDELTUNNEL, &ifr);
@@ -375,7 +376,7 @@ static int do_add(int cmd, int argc, char **argv)
 		return do_add_ioctl(cmd, "gre0", &p);
 	case IPPROTO_IPV6:
 		return do_add_ioctl(cmd, "sit0", &p);
-	default:	
+	default:
 		fprintf(stderr, _("cannot determine tunnel mode (ipip, gre or sit)\n"));
 		return -1;
 	}
@@ -390,13 +391,13 @@ int do_del(int argc, char **argv)
 		return -1;
 
 	switch (p.iph.protocol) {
-	case IPPROTO_IPIP:	
+	case IPPROTO_IPIP:
 		return do_del_ioctl(p.name[0] ? p.name : "tunl0", &p);
-	case IPPROTO_GRE:	
+	case IPPROTO_GRE:
 		return do_del_ioctl(p.name[0] ? p.name : "gre0", &p);
-	case IPPROTO_IPV6:	
+	case IPPROTO_IPV6:
 		return do_del_ioctl(p.name[0] ? p.name : "sit0", &p);
-	default:	
+	default:
 		return do_del_ioctl(p.name, &p);
 	}
 	return -1;
@@ -476,8 +477,10 @@ static int do_tunnels_list(struct ip_tunnel_parm *p)
 		return -1;
 	}
 
-	fgets(buf, sizeof(buf), fp);
-	fgets(buf, sizeof(buf), fp);
+	if (fgets(buf, sizeof(buf), fp))
+		/* eat line */;
+	if (fgets(buf, sizeof(buf), fp))
+		/* eat line */;
 
 	while (fgets(buf, sizeof(buf), fp) != NULL) {
 		char *ptr;
@@ -485,9 +488,10 @@ static int do_tunnels_list(struct ip_tunnel_parm *p)
 		if ((ptr = strchr(buf, ':')) == NULL ||
 		    (*ptr++ = 0, sscanf(buf, "%s", name) != 1)) {
 			fprintf(stderr, _("Wrong format of /proc/net/dev. Sorry.\n"));
+			fclose(fp);
 			return -1;
 		}
-		if (sscanf(ptr, "%ld%ld%ld%ld%ld%ld%ld%*d%ld%ld%ld%ld%ld%ld%ld",
+		if (sscanf(ptr, "%lu%lu%lu%lu%lu%lu%lu%*u%lu%lu%lu%lu%lu%lu%lu",
 			   &rx_bytes, &rx_packets, &rx_errs, &rx_drops,
 			   &rx_fifo, &rx_frame, &rx_multi,
 			   &tx_bytes, &tx_packets, &tx_errs, &tx_drops,
@@ -521,6 +525,7 @@ static int do_tunnels_list(struct ip_tunnel_parm *p)
 			       tx_packets, tx_bytes, tx_errs, tx_colls, tx_carrier, tx_drops);
 		}
 	}
+	fclose(fp);
 	return 0;
 }
 
@@ -533,7 +538,7 @@ static int do_show(int argc, char **argv)
 		return -1;
 
 	switch (p.iph.protocol) {
-	case IPPROTO_IPIP:	
+	case IPPROTO_IPIP:
 		err = do_get_ioctl(p.name[0] ? p.name : "tunl0", &p);
 		break;
 	case IPPROTO_GRE:
@@ -592,7 +597,7 @@ int main(int argc, char **argv)
 		basename = argv[0];
 	else
 		basename++;
-	
+
 	while (argc > 1) {
 		if (argv[1][0] != '-')
 			break;

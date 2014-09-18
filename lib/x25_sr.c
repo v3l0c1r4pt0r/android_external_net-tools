@@ -38,6 +38,7 @@
 #include "net-locale.h"
 #endif
 #include "intl.h"
+#include "util.h"
 
 #include "net-features.h"
 
@@ -64,10 +65,10 @@ static int X25_setroute(int action, int options, char **args)
   if (*args == NULL)
 	return(usage());
 
-  strcpy(target, *args++);
+  safe_strncpy(target, *args++, sizeof(target));
 
   /* Clean out the x25_route_struct structure. */
-  memset((char *) &rt, 0, sizeof(struct x25_route_struct));
+  memset((char *) &rt, 0, sizeof(rt));
 
 
   if ((sigdigits = x25_aftype.input(0, target, (struct sockaddr *)&sx25)) < 0) {
@@ -76,8 +77,8 @@ static int X25_setroute(int action, int options, char **args)
   }
   rt.sigdigits=sigdigits;
 
-  /* x25_route_struct.address isn't type struct sockaddr_x25, Why? */
-  memcpy(&rt.address, &sx25.sx25_addr, sizeof(x25_address));
+  /* this works with 2.4 and 2.6 headers struct x25_address vs. typedef */
+  memcpy(&rt.address, &sx25.sx25_addr, sizeof(sx25.sx25_addr));
 
   while (*args) {
 	if (!strcmp(*args,"device") || !strcmp(*args,"dev")) {
@@ -89,7 +90,7 @@ static int X25_setroute(int action, int options, char **args)
 			return(usage());
 	if (rt.device[0])
 		return(usage());
-	strcpy(rt.device, *args);
+	safe_strncpy(rt.device, *args, sizeof(rt.device));
 	args++;
   }
   if (rt.device[0]=='\0')
@@ -111,7 +112,7 @@ static int X25_setroute(int action, int options, char **args)
 	perror("socket");
 	return(E_SOCK);
   }
-  
+
   /* Tell the kernel to accept this route. */
   if (action==RTACTION_DEL) {
 	if (ioctl(skfd, SIOCDELRT, &rt) < 0) {
@@ -137,14 +138,14 @@ int X25_rinput(int action, int options, char **args)
   if (action == RTACTION_FLUSH) {
   	fprintf(stderr,"Flushing `x25' routing table not supported\n");
   	return(usage());
-  }	
+  }
   if (options & FLAG_CACHE) {
   	fprintf(stderr,"Modifying `x25' routing cache not supported\n");
   	return(usage());
-  }	
+  }
   if ((*args == NULL) || (action == RTACTION_HELP))
 	return(usage());
-  
+
   return(X25_setroute(action, options, args));
 }
 #endif	/* HAVE_AFX25 */

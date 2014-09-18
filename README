@@ -10,29 +10,35 @@ This package includes the important tools for controlling the network
 subsystem of the Linux kernel.  This includes arp, hostname, ifconfig,
 netstat, rarp and route.  Additionally, this package contains
 utilities relating to particular network hardware types (plipconfig,
-slattach) and advanced aspects of IP configuration (iptunnel,
+slattach, mii-tool) and advanced aspects of IP configuration (iptunnel,
 ipmaddr).
 
 Please include the output of "program --version" when reporting bugs.
 
 
 Contents:
-  
+
    README		This file.
 
    README.ipv6		Notes for people hacking IPv6.
 
    INSTALLING		Installation instructions.
 
-   COPYING		Your free copy of the GNU Public License.
+   COPYING		Your free copy of the GNU General Public License.
 
    TODO			Some things that need to be done.
+
+The  Homepage (including Git repository, release downloads, bug tracker and
+mailing list) is hosted by SourceForge.net. Please consider to
+join the project if you want to contribute:
+
+           https://sourceforge.net/projects/net-tools/
 
 
                           Notes
                           -----
 
-This is net-tools 1.60.
+This is net-tools 1.6x.
 
 You need kernel 2.0 or later to use these programs.  These programs
 should compile cleanly with both glibc (version 2.0 or 2.1) and libc5,
@@ -58,6 +64,8 @@ particular versions of the C library.  The defaults should be safe for
 all common environments but some of the more esoteric hardware and
 protocol families may be more touchy.  Feel free to send patches if
 you have problems.
+
+For this release, the localized man pages are installed with UTF-8 encoding.
 
 Phil Blundell
 philb@gnu.org
