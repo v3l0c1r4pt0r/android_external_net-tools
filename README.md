@@ -20,7 +20,7 @@ Following tools still doesn't work:
 - nameif
 
 This repo provides all tools available in net-tools package. However it was meant to provide netstat for Android
-since its functionality isn't (AFAIK) available in any other tool and busybox implementation is really limited. 
+because busybox implementation is really limited. 
 
 Installation
 ------------
