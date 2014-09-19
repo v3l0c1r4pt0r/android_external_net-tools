@@ -8,13 +8,13 @@ Overview
 This repository is an approach to provide native, full-featured version of
 net-tools for Android based devices. As of now it is possible to compile following tools:
 - arp - manipulate the system ARP cache
+- hostname - show or set system host name
 - ifconfig - configure a network interface
 - netstat - Print network connections, routing tables, interface statistics, masquerade connections, and multicast memberships
 - rarp - manipulate the system RARP table
 - route - show / manipulate the IP routing table
 
 Following tools still doesn't work:
-- hostname
 - slattach
 - plipconfig
 - nameif
@@ -46,5 +46,8 @@ Issues
 ------
 - ifconfig is failing at i.e. changing MAC address probably due to lack of getgrnam() function
 in bionic libc
+- hostname is useless at hte moment: localhost is returned as hostname and error as domainname, no ability to set any.
+It looks like Android is using non-standard way to provide real hostname for applications but surely it does it some way.
+We only need to find how and maybe we will be able to even change it...
 
 You can report any other issues using github and I will try to fix them.
