@@ -18,12 +18,17 @@
 //     return len;
 // }
 
-static int sethostname( const char* __name, size_t __len ) {
+// int gethostname(char* name, size_t len)
+// {
+//     //TODO: implement Android specific way of getting the hostname
+// }
+
+int sethostname( const char* __name, size_t __len ) {
     errno = EPERM;
     return -1;
 }
 
-static int getdomainname( char* __name, size_t __len ) {
+int getdomainname( char* __name, size_t __len ) {
     struct utsname n;
     if (uname(&n) < 0)
     {
@@ -35,7 +40,7 @@ static int getdomainname( char* __name, size_t __len ) {
     return 0;
 }
 
-static int setdomainname( const char* __name, size_t __len ) {
+int setdomainname( const char* __name, size_t __len ) {
     errno = EPERM;
     return -1;
 }
