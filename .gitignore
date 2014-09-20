@@ -36,3 +36,4 @@ core
 /slattach
 
 *.kdev4
+*.a

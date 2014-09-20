@@ -83,10 +83,10 @@ SELIB = $(SE_PC_LIBS)
 CPPFLAGS += $(SE_PC_CFLAGS)
 endif
 
-CPPFLAGS += -I. -I$(TOPDIR)/include -I$(NET_LIB_PATH)
-LDFLAGS  += -L$(NET_LIB_PATH)
+CPPFLAGS += -I. -I$(TOPDIR)/include -I$(NET_LIB_PATH) -Ibionic-fixup
+LDFLAGS  += -L$(NET_LIB_PATH) -Lbionic-fixup
 
-SUBDIRS	= man/ $(NET_LIB_PATH)/
+SUBDIRS	= man/ $(NET_LIB_PATH)/ bionic-fixup/
 
 NLIB	= -l$(NET_LIB_NAME)
 
@@ -164,7 +164,7 @@ nameif:		$(NET_LIB) nameif.o
 		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ nameif.o $(NLIB) $(RESLIB)
 
 hostname:	hostname.o
-		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ hostname.o $(DNLIB)
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ hostname.o $(DNLIB) -lfixup
 
 route:		$(NET_LIB) route.o
 		$(CC) $(CFLAGS) $(LDFLAGS) -o $@ route.o $(NLIB) $(RESLIB)
