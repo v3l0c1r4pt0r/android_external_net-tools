@@ -1,6 +1,9 @@
 #include <errno.h>
 #include <sys/utsname.h>
 #include <string.h>
+#include <sys/system_properties.h>
+
+#include "gethostname.h"
 
 // int property_get(const char *key, char *value, const char *default_value)
 // {
@@ -18,10 +21,17 @@
 //     return len;
 // }
 
-// int gethostname(char* name, size_t len)
-// {
-//     //TODO: implement Android specific way of getting the hostname
-// }
+int gethostname(char* name, size_t namelen)
+{
+    //TODO: implement Android specific way of getting the hostname
+    char key[] = HOSTNAME_PROP;
+    char value[PROPERTY_VALUE_MAX];
+    int len = __system_property_get(key, value);
+    if(len == 0)
+      return -1;
+    strncpy(name, value, namelen);
+    return 0;
+}
 
 int sethostname( const char* __name, size_t __len ) {
     errno = EPERM;
