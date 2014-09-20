@@ -23,7 +23,6 @@
 
 int gethostname(char* name, size_t namelen)
 {
-    //TODO: implement Android specific way of getting the hostname
     char key[] = HOSTNAME_PROP;
     char value[PROPERTY_VALUE_MAX];
     int len = __system_property_get(key, value);
@@ -34,6 +33,7 @@ int gethostname(char* name, size_t namelen)
 }
 
 int sethostname( const char* __name, size_t __len ) {
+    //TODO: implement with usage of net.hostname
     errno = EPERM;
     return -1;
 }
