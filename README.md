@@ -42,6 +42,22 @@ make ifconfig
 It is not possible to
 compile them all since compilation will terminate on hostname and compile only ifconfig.
 
+Installation with ndk-build
+---------------------------
+Alternative way to compile the project is to use ndk-build script that is provided by your NDK installation.
+While executing ndk-build you have to set two variables:
+
+- NDK_PROJECT_PATH - should point to main directory of the project
+- APP_BUILD_SCRIPT - should be Android.mk (it is relative to project path)
+
+It can be done i.e. by typing:
+```
+$NDK/ndk-build NDK_PROJECT_PATH=`pwd` APP_BUILD_SCRIPT=Android.mk
+```
+when CWD is main directory of a project and $NDK points to your NDK installation.
+
+Note: Android.mk is in development state now so it may not work as expected!
+
 Issues
 ------
 - ifconfig is failing at i.e. changing MAC address probably due to lack of getgrnam() function
