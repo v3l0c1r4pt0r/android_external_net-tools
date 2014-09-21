@@ -17,12 +17,12 @@
 # Default Name
 BIONIC_NAME = fixup
 
-OBJS	= gethostname.o
+OBJS	= socket_local_client.o properties.o gethostname.o
 
 
 # This can be overwritten by the TOPLEVEL Makefile
 TOPDIR=..
-CFLAGS += -I$(TOPDIR) -I$(TOPDIR)/include -include bionic-fixup/Xprotoent.h # -fPIC
+CFLAGS += -I$(TOPDIR) -I$(TOPDIR)/include -include bionic-fixup/Xprotoent.h -DHAVE_SYS_SOCKET_H # -DHAVE_LIBC_SYSTEM_PROPERTIES # -fPIC
 
 .SUFFIXES: .a
 

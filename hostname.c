@@ -44,6 +44,7 @@
 #include "version.h"
 #include "net-support.h"
 #include "../intl.h"
+#include "bionic-fixup/gethostname.h"
 
 #if HAVE_AFINET6
 #include <sys/socket.h> /* for PF_INET6 */

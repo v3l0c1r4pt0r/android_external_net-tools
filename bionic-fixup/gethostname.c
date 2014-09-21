@@ -4,6 +4,7 @@
 #include <sys/system_properties.h>
 
 #include "gethostname.h"
+#include "properties.h"
 
 int gethostname(char* name, size_t namelen)
 {
@@ -11,15 +12,19 @@ int gethostname(char* name, size_t namelen)
     char value[PROPERTY_VALUE_MAX];
     int len = __system_property_get(key, value);
     if(len == 0)
-      return -1;
+        return -1;
     strncpy(name, value, namelen);
     return 0;
 }
 
 int sethostname( const char* __name, size_t __len ) {
-    //TODO: implement with usage of net.hostname
-    errno = EPERM;
-    return -1;
+    if(property_set(HOSTNAME_PROP, __name))
+    {
+        errno = EPERM;
+        return -1;
+    }
+    else
+        return 0;
 }
 
 int getdomainname( char* __name, size_t __len ) {
