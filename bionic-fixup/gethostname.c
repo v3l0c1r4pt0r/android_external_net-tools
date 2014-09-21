@@ -5,22 +5,6 @@
 
 #include "gethostname.h"
 
-// int property_get(const char *key, char *value, const char *default_value)
-// {
-//     int len;
-// 
-//     len = __system_property_get(key, value);
-//     if(len > 0) {
-//         return len;
-//     }
-//     
-//     if(default_value) {
-//         len = strlen(default_value);
-//         memcpy(value, default_value, len + 1);
-//     }
-//     return len;
-// }
-
 int gethostname(char* name, size_t namelen)
 {
     char key[] = HOSTNAME_PROP;
