@@ -38,3 +38,5 @@ core
 *.kdev4
 *.a
 obj
+libs
+
