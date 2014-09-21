@@ -46,6 +46,6 @@ Issues
 ------
 - ifconfig is failing at i.e. changing MAC address probably due to lack of getgrnam() function
 in bionic libc
-- hostname cannot set hostname at the moment; domainname always returns error
+- hostname: domainname always returns error
 
 You can report any other issues using github and I will try to fix them.
