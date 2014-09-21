@@ -56,7 +56,7 @@ $NDK/ndk-build NDK_PROJECT_PATH=`pwd` APP_BUILD_SCRIPT=Android.mk
 ```
 when CWD is main directory of a project and $NDK points to your NDK installation.
 
-Note: Android.mk is in development state now so it may not work as expected!
+When using ndk-build you don't have to configure the project since there is precofigured config.h.
 
 Issues
 ------
